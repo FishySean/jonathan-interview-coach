@@ -17,7 +17,7 @@ from typing import Any
 
 import yt_dlp
 
-from scripts.paths import PROJECT_ROOT, SHORTS_URLS_FILE, setup_path
+from scripts.paths import PROJECT_ROOT, SHORTS_URLS_FILE, VIDEO_REGISTRY_FILE, setup_path
 from scripts.pipeline.video_registry import VideoRegistry, extract_video_id
 
 setup_path()
