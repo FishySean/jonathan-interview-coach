@@ -15,10 +15,17 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from scripts.paths import RAW_VIDEOS_DIR, TRANSCRIPTS_DIR, VIDEO_REGISTRY_FILE, setup_path
+from scripts.paths import (
+    RAW_VIDEOS_DIR,
+    TRANSCRIPTS_DIR,
+    VIDEO_REGISTRY_FILE,
+    ensure_env_bin_on_path,
+    setup_path,
+)
 from scripts.pipeline.video_registry import VideoRegistry
 
 setup_path()
+ensure_env_bin_on_path()
 
 VIDEO_EXTENSIONS = {".mp4", ".webm", ".mkv", ".m4a", ".mp3", ".wav"}
 
@@ -308,7 +315,22 @@ def main() -> None:
         videos = list_videos(input_dir)
 
     if not videos:
-        print(f"未找到视频文件。请将视频放入 {input_dir}", file=sys.stderr)
+        fragments = [
+            p.name
+            for p in input_dir.iterdir()
+            if p.is_file() and ".f" in p.stem and p.suffix.lower() in {".mp4", ".m4a", ".webm"}
+        ]
+        if fragments:
+            print(
+                f"未找到可转录的完整视频，但发现 {len(fragments)} 个 yt-dlp 未合并分片"
+                f"（如 *.f137.mp4 / *.f140.m4a）。\n"
+                f"原因通常是下载时找不到 ffmpeg，音视频没有合并成单个 .mp4。\n"
+                f"请运行: python -m scripts.tools.merge_raw_fragments\n"
+                f"或重新下载（需确保 ffmpeg 可用）。",
+                file=sys.stderr,
+            )
+        else:
+            print(f"未找到视频文件。请将视频放入 {input_dir}", file=sys.stderr)
         sys.exit(1)
 
     print(f"输入: {input_dir}")
@@ -325,6 +347,7 @@ def main() -> None:
 
     print("Whisper 模型已就绪，开始转录。\n")
 
+    failures = 0
     for i, video in enumerate(videos, start=1):
         try:
             transcribe_file(
@@ -342,9 +365,13 @@ def main() -> None:
                 delete_after=args.delete_after,
             )
         except Exception as exc:
+            failures += 1
             print(f"失败: {video.name} — {exc}", file=sys.stderr)
 
     print("\n完成。请检查 transcripts/ 目录。")
+    if failures:
+        print(f"有 {failures} 个视频转录失败。", file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == "__main__":

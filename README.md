@@ -5,7 +5,7 @@
 把 YouTube Shorts 上 [Jonathan Career](https://www.youtube.com/@MrJonathanCareer) 的面试技巧，提炼成 Claude 可加载的 **Interview Coach Skill**。
 
 - **工具仓库（本 repo）**：`jonathan-interview-coach` — pipeline、可视化界面、蒸馏脚本  
-- **可分享产物**：[`data/skill/SKILL.md`](data/skill/SKILL.md) — 直接上传 Claude Project
+- **可分享产物**：[`data/skill/`](data/skill/) — Agent Skills 布局（瘦身 `SKILL.md` + `references/`）
 
 > 作者：[FishySean](https://github.com/FishySean)（Sean Fan）
 
@@ -44,7 +44,7 @@ jonathan-interview-coach/
 │   ├── raw_videos/      # L1 视频（转录后自动删除）
 │   ├── transcripts/     # L2 转录文本
 │   ├── distilled/       # L3 按视频蒸馏（by_video/）
-│   ├── skill/           # L4 ★ Skill 产物（SKILL.md + README + CHANGELOG）
+│   ├── skill/           # L4 ★ Skill（瘦身 SKILL.md + references/）
 │   ├── shorts_urls.txt      # 运行时 URL 列表（gitignore）
 │   └── download_archive.txt # 运行时下载记录（gitignore）
 ├── scripts/             # 自动化脚本（按功能分子目录）
@@ -211,9 +211,9 @@ python -m scripts.distill --limit 9 --model gpt-4o
 
 每蒸馏 **1 个 transcript**：
 - 写入 `data/distilled/by_video/{视频名}.md`
-- 自动 **重新合并** [`data/skill/SKILL.md`](data/skill/SKILL.md)
+- 自动 **重新合并** skill 包：瘦身 [`SKILL.md`](data/skill/SKILL.md) + 同步 [`references/by_video/`](data/skill/references/by_video/)
 
-**最终产物**：`data/skill/SKILL.md` — 上传到 Claude Project Knowledge。
+**最终产物**：`data/skill/` — 按 Agent Skills progressive disclosure 组织（入口短、细节按需加载）。
 
 ### 修复损坏视频
 
@@ -225,24 +225,24 @@ python -m scripts.tools.fix_broken_video
 
 ### Step 5：装进 Claude（按需切换人格）
 
-**简单版（推荐先做）**
+**Claude Code / Cursor skill（推荐）**
 
-1. 打开 Claude → Project
-2. Add Knowledge
-3. 上传 [`data/skill/SKILL.md`](data/skill/SKILL.md)
-
-**高级版（Claude Skills）**
-
+```bash
+mkdir -p .claude/skills/jonathan-interview-coach
+cp -R data/skill/SKILL.md data/skill/references \
+  .claude/skills/jonathan-interview-coach/
 ```
-.claude/skills/jonathan-interview/skill.md
-```
+
+**Claude Project**
+
+上传 `SKILL.md` + `references/frameworks.md`；按需再加个别 `references/by_video/*.md`。详见 [`data/skill/README.md`](data/skill/README.md)。
 
 ## 后续扩展
 
 | 阶段 | 目录 | 说明 |
 |------|------|------|
-| 蒸馏 | `distilled/` | principles.md, followup_rules.md, scoring.md, answer_patterns.md |
-| Skill | `skill/` | 合并为单一 Coach 人格文件 |
+| 蒸馏 | `distilled/by_video/` | 每条 Short 的完整蒸馏（源） |
+| Skill | `skill/` | 瘦身入口 + `references/` 按需加载 |
 | API | `scripts/distill/` | Ollama / OpenAI / Anthropic 批量蒸馏 |
 
 蒸馏目标**不是简单总结**，而是提取：
@@ -270,11 +270,11 @@ git push -u origin main
 
 **建议提交的内容：**
 
-- ✅ `data/skill/SKILL.md`、`data/skill/README.md`、`data/skill/CHANGELOG.md`
+- ✅ `data/skill/`（`SKILL.md`、`references/`、`README.md`、`CHANGELOG.md`）
 - ✅ `app.py`、`scripts/`、`prompts/`、`ui/`、`README.md`
-- ❌ `data/transcripts/`、`data/raw_videos/`、`.env`（已在 `.gitignore`）
+- ❌ `data/transcripts/`、`data/raw_videos/`、`data/distilled/`、`.env`（已在 `.gitignore`）
 
-别人 clone 后只想用 Skill → 读 [`data/skill/README.md`](data/skill/README.md)，上传 `data/skill/SKILL.md` 即可。
+别人 clone 后只想用 Skill → 读 [`data/skill/README.md`](data/skill/README.md)，拷贝整个 `data/skill/` 目录即可。
 
 ## 环境变量（后续 API 阶段）
 

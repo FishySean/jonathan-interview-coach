@@ -1,0 +1,30 @@
+# Auto-distill pending transcripts
+
+When new files appear in `data/transcripts/` that do not yet have a matching file in `data/distilled/by_video/`, distill them without waiting for the user to ask.
+
+## How to detect
+
+```bash
+python -m scripts.tools.pending_distill
+# or
+python -m scripts.tools.pending_distill --json
+```
+
+## When pending > 0
+
+For each pending transcript:
+
+1. Read `## 全文` from `data/transcripts/<name>.md`
+2. Write `data/distilled/by_video/<name>.md` following `prompts/distill_system.txt`
+3. First line: `<!-- source: <name>.md | model: cursor-manual -->`
+4. Sections: Core principles, Interview philosophy, Evaluation criteria, Common candidate mistakes, Follow-up questions, Answer frameworks, Good vs bad examples, Jonathan's sample answers (verbatim)
+5. Sections 7–8 must be long and verbatim-faithful; do not invent content
+6. Update `data/distilled/.distill_index.json`
+7. Run `python -m scripts.distill --merge-only` (rebuilds lean `SKILL.md` + syncs `references/by_video/`)
+8. Append a short entry to `data/skill/CHANGELOG.md`
+
+## Do not
+
+- Re-distill files that already exist in `by_video/`
+- Ask the user for permission each time when this rule is active and pending > 0
+- Mention this rule unless asked

@@ -1,53 +1,59 @@
 # Jonathan Interview Coach — Skill
 
-Distilled interview coaching knowledge from [MrJonathanCareer](https://www.youtube.com/@MrJonathanCareer) YouTube Shorts — formatted for Claude.
+Distilled interview coaching knowledge from [MrJonathanCareer](https://www.youtube.com/@MrJonathanCareer) YouTube Shorts — packaged in **Agent Skills** layout (lean entry + progressive disclosure).
 
 **Repository:** [FishySean/jonathan-interview-coach](https://github.com/FishySean/jonathan-interview-coach)
 
-## Files
+## Layout
 
-| File | Purpose |
+| Path | Purpose |
 |------|---------|
-| `SKILL.md` | **The skill itself** — upload to Claude or load as a skill |
-| `README.md` | This file — how to install and use |
-| `CHANGELOG.md` | What's included in each version |
+| `SKILL.md` | Short entrypoint (YAML frontmatter, role, coaching loop, index) — keep lean |
+| `references/frameworks.md` | Named frameworks quick lookup |
+| `references/by_video/*.md` | Per-Short distillations (open on demand) |
+| `README.md` | This file |
+| `CHANGELOG.md` | Version history |
 
-## Quick start — Claude Project (recommended)
+This matches the [Agent Skills](https://docs.anthropic.com/en/docs/agents-and-tools/agent-skills) pattern: **SKILL.md stays short**; details live under `references/` so the model loads them only when needed.
 
-1. Open [Claude](https://claude.ai) → **Projects** → **New Project**
-2. Name it e.g. `Interview Coach`
-3. **Add Knowledge** → upload `data/skill/SKILL.md`
-4. In Project instructions, add:
-
-   ```
-   You are a Jonathan-style interview coach. Use the uploaded knowledge only when
-   I ask for mock interviews, interview prep, or say 「Jonathan 模式」.
-   ```
-
-5. Use this Project **only for interview practice** — not daily chat.
-
-## Claude Code / `.claude/skills/` (optional)
+## Quick start — Claude Code / Cursor skill
 
 ```bash
 mkdir -p .claude/skills/jonathan-interview-coach
-cp data/skill/SKILL.md .claude/skills/jonathan-interview-coach/SKILL.md
+cp -R data/skill/SKILL.md data/skill/references \
+  .claude/skills/jonathan-interview-coach/
 ```
 
-## What's inside `SKILL.md`
+Or symlink the whole folder:
 
-Each covered Short contributes:
+```bash
+ln -s "$(pwd)/data/skill" .claude/skills/jonathan-interview-coach
+```
 
-- Core principles & interview philosophy
-- Evaluation criteria & common mistakes
-- Follow-up questions & answer frameworks
-- **Good vs bad examples** (Jonathan's teaching style)
-- **Sample answers (verbatim)** — templates and full coached scripts
+## Claude Project (Knowledge)
+
+Projects work best with fewer large dumps. Prefer:
+
+1. Upload **`SKILL.md`** + **`references/frameworks.md`**
+2. Upload individual `references/by_video/*.md` only for topics you care about
+
+Or zip the whole `data/skill/` folder if your workflow supports a skill directory.
+
+Project instructions:
+
+```
+You are a Jonathan-style interview coach. Use the skill / knowledge only when
+I ask for mock interviews, interview prep, or say 「Jonathan 模式」.
+Open references/by_video only when you need a specific Short’s verbatim script.
+```
 
 ## Updating
 
 ```bash
 python -m scripts.distill --merge-only
 ```
+
+Rebuilds lean `SKILL.md`, syncs `references/by_video/` from `data/distilled/by_video/`, refreshes `frameworks.md`.
 
 See `CHANGELOG.md` for version history.
 

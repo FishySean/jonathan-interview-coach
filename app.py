@@ -19,11 +19,15 @@ from pathlib import Path
 
 def _ensure_project_python() -> None:
     """若用错了解释器（如系统 Python），自动切换到 conda 环境。"""
-    try:
-        import flask  # noqa: F401
+    required = ("flask", "yt_dlp", "faster_whisper")
+    missing = []
+    for name in required:
+        try:
+            __import__(name)
+        except ModuleNotFoundError:
+            missing.append(name)
+    if not missing:
         return
-    except ModuleNotFoundError:
-        pass
 
     project_root = Path(__file__).resolve().parent
     candidates = [
@@ -36,12 +40,13 @@ def _ensure_project_python() -> None:
     current = Path(sys.executable).resolve()
     for candidate in candidates:
         if candidate.exists() and candidate.resolve() != current:
-            print(f"检测到当前 Python 缺少依赖: {current}")
+            print(f"检测到当前 Python 缺少依赖 {missing}: {current}")
             print(f"正在切换到: {candidate}")
             os.execv(str(candidate), [str(candidate), *sys.argv])
 
-    print("错误: 未安装项目依赖（缺少 flask）。")
+    print("错误: 未安装项目依赖。")
     print(f"当前 Python: {sys.executable}")
+    print(f"缺少: {', '.join(missing)}")
     print("请先运行: ./setup_env.sh")
     print("然后执行: conda activate jonathan-coach && python app.py")
     sys.exit(1)
@@ -54,46 +59,72 @@ from flask import Flask, Response, jsonify, request, send_from_directory
 PROJECT_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from scripts.pipeline import PipelineConfig, PipelineStats, run_pipeline
+from scripts.paths import ensure_env_bin_on_path
+from scripts.pipeline import PipelineConfig, PipelineStats, collect_disk_stats, run_pipeline
+
+# 未 conda activate 时也能让子进程找到同环境的 ffmpeg
+ensure_env_bin_on_path()
 
 UI_DIR = PROJECT_ROOT / "ui"
 
 app = Flask(__name__, static_folder=str(UI_DIR), static_url_path="")
 
 _event_queue: queue.Queue[dict] = queue.Queue()
-_stats = PipelineStats()
+_stats = collect_disk_stats()
 _running = False
 _server = None
 _shutting_down = False
 _lock = threading.Lock()
 
 
+def _stats_with_disk_floor(data: dict) -> PipelineStats:
+    """流水线瞬时数字不得低于磁盘累计（避免清理 raw 后页面变成 0）。"""
+    disk = collect_disk_stats()
+    return PipelineStats(
+        urls_found=max(int(data.get("urls_found", 0) or 0), disk.urls_found),
+        videos_total=max(int(data.get("videos_total", 0) or 0), disk.videos_total),
+        transcripts_total=max(
+            int(data.get("transcripts_total", 0) or 0), disk.transcripts_total
+        ),
+        distilled_total=max(
+            int(data.get("distilled_total", 0) or 0), disk.distilled_total
+        ),
+        phase=str(data.get("phase", "idle") or "idle"),
+        running=bool(data.get("running", False)),
+        error=str(data.get("error", "") or ""),
+    )
+
+
 def _broadcast(kind: str, payload: dict) -> None:
     global _stats
-    if "stats" in payload:
-        data = payload["stats"]
-        _stats = PipelineStats(
-            urls_found=data.get("urls_found", 0),
-            videos_total=data.get("videos_total", 0),
-            transcripts_total=data.get("transcripts_total", 0),
-            distilled_total=data.get("distilled_total", 0),
-            phase=data.get("phase", "idle"),
-            running=data.get("running", True),
-            error=data.get("error", ""),
-        )
-    elif payload.get("phase"):
-        _stats.phase = str(payload["phase"])
-        _stats.running = True
-    if payload.get("transcribe_current") and payload.get("transcribe_total"):
-        _stats.transcripts_total = max(
-            _stats.transcripts_total,
-            int(payload["transcribe_current"]) - 1,
-        )
-    _event_queue.put({
-        "kind": kind,
-        "timestamp": time.time(),
-        **payload,
-    })
+    try:
+        if "stats" in payload:
+            data = dict(payload["stats"])
+            _stats = _stats_with_disk_floor(data)
+            payload = {**payload, "stats": _stats.to_dict()}
+        elif payload.get("phase"):
+            _stats.phase = str(payload["phase"])
+            _stats.running = True
+        if payload.get("transcribe_current") and payload.get("transcribe_total"):
+            _stats.transcripts_total = max(
+                _stats.transcripts_total,
+                int(payload["transcribe_current"]) - 1,
+                collect_disk_stats().transcripts_total,
+            )
+    except Exception:
+        import logging
+
+        logging.exception("broadcast stats update failed")
+    try:
+        _event_queue.put({
+            "kind": kind,
+            "timestamp": time.time(),
+            **payload,
+        })
+    except Exception:
+        import logging
+
+        logging.exception("broadcast enqueue failed")
 
 
 def _pipeline_worker(config: PipelineConfig) -> None:
@@ -101,7 +132,9 @@ def _pipeline_worker(config: PipelineConfig) -> None:
     try:
         run_pipeline(config, on_event=_broadcast)
     except Exception:
-        pass
+        import logging
+
+        logging.exception("Pipeline 失败")
     finally:
         with _lock:
             _running = False
@@ -119,7 +152,38 @@ def assets(filename: str) -> Response:
 
 @app.get("/api/status")
 def status() -> Response:
-    return jsonify(_stats.to_dict() | {"running": _running})
+    global _stats
+    try:
+        if not _running:
+            # 每次打开页面都从磁盘重读累计数据
+            phase = _stats.phase if _stats.phase == "error" else "idle"
+            error = _stats.error if phase == "error" else ""
+            _stats = collect_disk_stats(phase=phase, running=False, error=error)
+        else:
+            _stats = _stats_with_disk_floor(_stats.to_dict() | {"running": True})
+        return jsonify(_stats.to_dict() | {"running": _running})
+    except Exception as exc:
+        import logging
+
+        logging.exception("api/status failed")
+        return jsonify(
+            {
+                "urls_found": 0,
+                "videos_total": 0,
+                "transcripts_total": 0,
+                "distilled_total": 0,
+                "phase": "error",
+                "running": _running,
+                "error": str(exc),
+                "output_paths": {
+                    "urls": "data/shorts_urls.txt",
+                    "videos": "data/raw_videos",
+                    "transcripts": "data/transcripts",
+                    "distilled": "data/distilled/by_video",
+                    "skill": "data/skill/SKILL.md",
+                },
+            }
+        )
 
 
 @app.post("/api/start")
@@ -131,22 +195,29 @@ def start() -> Response:
         _running = True
 
     body = request.get_json(silent=True) or {}
+
+    def _as_int(value: object, default: int) -> int:
+        try:
+            return int(value)  # type: ignore[arg-type]
+        except (TypeError, ValueError):
+            return default
+
     config = PipelineConfig(
-        channel=body.get("channel", "@MrJonathanCareer"),
-        channel_url=body.get("channel_url", ""),
-        max_videos=int(body.get("max_videos", 10)),
-        language=body.get("language", "en"),
-        model=body.get("model", "small"),
-        backend=body.get("backend", "faster-whisper"),
-        output_format=body.get("format", "md"),
+        channel=body.get("channel", "@MrJonathanCareer") or "@MrJonathanCareer",
+        channel_url=body.get("channel_url", "") or "",
+        max_videos=_as_int(body.get("max_videos", 10), 10),
+        language=body.get("language", "en") or "en",
+        model=body.get("model", "small") or "small",
+        backend=body.get("backend", "faster-whisper") or "faster-whisper",
+        output_format=body.get("format", "md") or "md",
         skip_download=bool(body.get("skip_download", False)),
         skip_transcribe=bool(body.get("skip_transcribe", False)),
         auto_distill=bool(body.get("auto_distill", False)),
         skip_distill=bool(body.get("skip_distill", False)),
-        distill_backend=body.get("distill_backend", "auto"),
+        distill_backend=body.get("distill_backend", "auto") or "auto",
         distill_model=body.get("distill_model") or None,
-        distill_limit=int(body.get("distill_limit", 0)),
-        auto_install_requirements=bool(body.get("auto_install_requirements", True)),
+        distill_limit=_as_int(body.get("distill_limit", 0), 0),
+        auto_install_requirements=bool(body.get("auto_install_requirements", False)),
     )
 
     _broadcast("status", {"message": "任务已启动", "stats": PipelineStats(running=True, phase="starting").to_dict()})
@@ -187,7 +258,10 @@ def events() -> Response:
         while True:
             try:
                 event = _event_queue.get(timeout=20)
-                yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+                try:
+                    yield f"data: {json.dumps(event, ensure_ascii=False, default=str)}\n\n"
+                except Exception:
+                    yield f"data: {json.dumps({'kind': 'log', 'message': '事件序列化失败，已跳过'})}\n\n"
             except queue.Empty:
                 yield f"data: {json.dumps({'kind': 'ping'})}\n\n"
 

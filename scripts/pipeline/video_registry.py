@@ -86,13 +86,17 @@ class VideoRegistry:
         filename_stem: str | None = None,
     ) -> None:
         entry = self._videos.setdefault(video_id, {})
-        entry.update({
-            "url": url,
-            "title": title or entry.get("title"),
-            "filename_stem": filename_stem or entry.get("filename_stem"),
-            "status": "downloaded",
-            "downloaded_at": _now_iso(),
-        })
+        previous = entry.get("status")
+        entry["url"] = url
+        if title:
+            entry["title"] = title
+        if filename_stem:
+            entry["filename_stem"] = filename_stem
+            entry.setdefault("slug", filename_stem)
+        # 不降级已转录 / 已蒸馏
+        if previous not in {"transcribed", "distilled"}:
+            entry["status"] = "downloaded"
+        entry["downloaded_at"] = _now_iso()
         self.save()
 
     def mark_transcribed(
@@ -103,22 +107,34 @@ class VideoRegistry:
         transcript_file: str | None = None,
     ) -> None:
         entry = self._videos.setdefault(video_id, {})
+        previous = entry.get("status")
         entry.update({
             "slug": slug,
+            "filename_stem": entry.get("filename_stem") or slug,
             "transcript_file": transcript_file or f"{slug}.md",
-            "status": "transcribed",
             "transcribed_at": _now_iso(),
         })
+        if previous != "distilled":
+            entry["status"] = "transcribed"
         self.save()
 
     def mark_transcribed_by_stem(self, stem: str, *, transcript_file: str | None = None) -> None:
         video_id = self.get_id_by_stem(stem)
         if video_id:
             self.mark_transcribed(video_id, slug=stem, transcript_file=transcript_file)
-        else:
-            # 无 video id 时仍按 slug 登记，便于蒸馏索引对齐
-            pseudo_id = f"slug:{stem}"
-            self.mark_transcribed(pseudo_id, slug=stem, transcript_file=transcript_file)
+            return
+        # 尝试用 title 模糊匹配已有条目（避免再造 slug: 伪 ID）
+        for vid, entry in self._videos.items():
+            if vid.startswith("slug:"):
+                continue
+            title = str(entry.get("title") or "")
+            fname = str(entry.get("filename_stem") or "")
+            if stem == fname or stem.replace("_", " ") == title.replace(" ", " "):
+                self.mark_transcribed(vid, slug=stem, transcript_file=transcript_file)
+                return
+        # 无 video id 时仍按 slug 登记，便于蒸馏索引对齐
+        pseudo_id = f"slug:{stem}"
+        self.mark_transcribed(pseudo_id, slug=stem, transcript_file=transcript_file)
 
     def mark_distilled(self, video_id: str) -> None:
         entry = self._videos.setdefault(video_id, {})
@@ -133,33 +149,49 @@ class VideoRegistry:
 
     def bootstrap_from_existing(self) -> None:
         """首次运行：从 download_archive、transcripts、distill 索引回填。"""
-        # 1) yt-dlp archive → 视为已转录（历史 pipeline 产物）
+        # 1) yt-dlp archive → 仅标记为 downloaded（不能假定已转录）
         if DOWNLOAD_ARCHIVE_FILE.exists():
             for line in DOWNLOAD_ARCHIVE_FILE.read_text(encoding="utf-8").splitlines():
                 parts = line.strip().split()
                 if len(parts) >= 2 and parts[0] == "youtube":
                     vid = parts[1]
                     entry = self._videos.setdefault(vid, {})
-                    if entry.get("status") not in {"transcribed", "distilled"}:
-                        entry["status"] = "transcribed"
+                    if entry.get("status") not in {"transcribed", "distilled", "downloaded"}:
+                        entry["status"] = "downloaded"
                         entry["bootstrapped_from"] = "download_archive"
-                        entry["transcribed_at"] = entry.get("transcribed_at") or _now_iso()
+                        entry["downloaded_at"] = entry.get("downloaded_at") or _now_iso()
 
-        # 2) 已有 transcript → 补全 slug（仅合并到已有 video ID 条目）
+        # 2) 已有 transcript → 标为 transcribed；尽量挂到已有 video ID
         if TRANSCRIPTS_DIR.exists():
             for path in sorted(TRANSCRIPTS_DIR.glob("*.md")):
                 slug = path.stem
-                if slug.endswith(".f140") or slug.endswith(".f137"):
+                if ".f" in slug and slug.rsplit(".f", 1)[-1].isdigit():
                     continue
-                for entry in self._videos.values():
-                    if entry.get("slug") == slug:
-                        break
-                    if entry.get("filename_stem") == slug:
-                        entry.setdefault("slug", slug)
-                        entry.setdefault("transcript_file", path.name)
-                        if entry.get("status") == "downloaded":
+                matched = False
+                for vid, entry in self._videos.items():
+                    if vid.startswith("slug:"):
+                        continue
+                    if entry.get("slug") == slug or entry.get("filename_stem") == slug:
+                        entry["slug"] = slug
+                        entry["filename_stem"] = entry.get("filename_stem") or slug
+                        entry["transcript_file"] = path.name
+                        if entry.get("status") != "distilled":
                             entry["status"] = "transcribed"
+                        entry.setdefault("transcribed_at", _now_iso())
+                        matched = True
                         break
+                if not matched:
+                    # 无 ID 关联时用 slug 伪条目，避免丢失已有转录
+                    pseudo = f"slug:{slug}"
+                    entry = self._videos.setdefault(pseudo, {})
+                    entry.update({
+                        "slug": slug,
+                        "filename_stem": slug,
+                        "transcript_file": path.name,
+                        "status": "transcribed",
+                        "transcribed_at": entry.get("transcribed_at") or _now_iso(),
+                        "bootstrapped_from": "transcript_file",
+                    })
 
         # 3) 蒸馏索引 → 标记 distilled
         if DISTILL_INDEX_FILE.exists():

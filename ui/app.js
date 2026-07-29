@@ -59,10 +59,15 @@ function addLog(kind, message, timestamp = Date.now() / 1000) {
 
 function updateStats(stats, extras = {}) {
   if (!stats) return;
-  statUrls.textContent = stats.urls_found ?? 0;
-  statVideos.textContent = stats.videos_total ?? 0;
-  statTranscripts.textContent = stats.transcripts_total ?? 0;
-  statDistilled.textContent = stats.distilled_total ?? 0;
+  // 只更新明确给出的字段，避免 phase-only 事件把累计数字刷成 0
+  if (stats.urls_found != null) statUrls.textContent = stats.urls_found;
+  if (stats.videos_total != null) statVideos.textContent = stats.videos_total;
+  if (stats.transcripts_total != null) {
+    statTranscripts.textContent = stats.transcripts_total;
+  }
+  if (stats.distilled_total != null) {
+    statDistilled.textContent = stats.distilled_total;
+  }
 
   if (stats.output_paths) {
     pathUrls.textContent = stats.output_paths.urls;
@@ -109,16 +114,26 @@ function setRunning(value) {
 }
 
 async function refreshStatus() {
-  const res = await fetch("/api/status");
-  const data = await res.json();
-  updateStats(data);
-  setRunning(Boolean(data.running));
+  try {
+    const res = await fetch("/api/status");
+    if (!res.ok) throw new Error(`status ${res.status}`);
+    const data = await res.json();
+    updateStats(data);
+    setRunning(Boolean(data.running));
+  } catch {
+    // 启动瞬间或服务重启时可能短暂失败，不打断页面
+  }
 }
 
 function connectEvents() {
   const source = new EventSource("/api/events");
   source.onmessage = (event) => {
-    const payload = JSON.parse(event.data);
+    let payload;
+    try {
+      payload = JSON.parse(event.data);
+    } catch {
+      return;
+    }
     if (payload.kind === "ping") return;
 
     if (payload.stats) {
@@ -158,22 +173,27 @@ startBtn.addEventListener("click", async () => {
     model: document.getElementById("model").value,
     auto_distill: document.getElementById("autoDistill").checked,
     distill_backend: document.getElementById("distillBackend").value,
-    auto_install_requirements: true,
+    auto_install_requirements: false,
   };
 
   setRunning(true);
   addLog("phase", "已发送启动指令，准备开始…");
 
-  const res = await fetch("/api/start", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+  try {
+    const res = await fetch("/api/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
 
-  const data = await res.json();
-  if (!res.ok) {
+    const data = await res.json();
+    if (!res.ok) {
+      setRunning(false);
+      addLog("error", data.error || "启动失败");
+    }
+  } catch (err) {
     setRunning(false);
-    addLog("error", data.error || "启动失败");
+    addLog("error", "无法连接本地服务，请确认 python app.py 仍在运行");
   }
 });
 

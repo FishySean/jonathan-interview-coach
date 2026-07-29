@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+import shutil
 import sys
 from pathlib import Path
 
@@ -18,6 +20,9 @@ SKILL_DIR = DATA_DIR / "skill"
 SKILL_FILE = SKILL_DIR / "SKILL.md"
 SKILL_README = SKILL_DIR / "README.md"
 SKILL_CHANGELOG = SKILL_DIR / "CHANGELOG.md"
+SKILL_REFERENCES_DIR = SKILL_DIR / "references"
+SKILL_REFERENCES_BY_VIDEO_DIR = SKILL_REFERENCES_DIR / "by_video"
+SKILL_FRAMEWORKS_FILE = SKILL_REFERENCES_DIR / "frameworks.md"
 
 DISTILLED_BY_VIDEO_DIR = DISTILLED_DIR / "by_video"
 EXTERNAL_DIR = PROJECT_ROOT / "external"
@@ -35,3 +40,30 @@ def setup_path() -> Path:
     if root not in sys.path:
         sys.path.insert(0, root)
     return PROJECT_ROOT
+
+
+def python_env_bin() -> Path:
+    """当前解释器所在 bin 目录（conda/venv 的 ffmpeg 通常也在这里）。"""
+    return Path(sys.executable).resolve().parent
+
+
+def ensure_env_bin_on_path() -> str:
+    """把当前 Python 环境的 bin 放到 PATH 最前，避免未 activate 时找不到 ffmpeg。"""
+    env_bin = str(python_env_bin())
+    path = os.environ.get("PATH", "")
+    parts = path.split(os.pathsep) if path else []
+    if env_bin not in parts:
+        os.environ["PATH"] = env_bin + (os.pathsep + path if path else "")
+    return os.environ["PATH"]
+
+
+def resolve_ffmpeg() -> Path | None:
+    """定位 ffmpeg：优先 PATH，其次与当前 Python 同目录。"""
+    ensure_env_bin_on_path()
+    which = shutil.which("ffmpeg")
+    if which:
+        return Path(which)
+    sibling = python_env_bin() / "ffmpeg"
+    if sibling.exists():
+        return sibling
+    return None

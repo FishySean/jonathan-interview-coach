@@ -21,6 +21,8 @@ data/skill/*
 !data/skill/SKILL.md
 !data/skill/README.md
 !data/skill/CHANGELOG.md
+!data/skill/references/
+!data/skill/references/**
 
 # 第三方 clone / 大文件（保留说明文档）
 external/*

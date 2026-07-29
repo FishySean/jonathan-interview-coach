@@ -12,9 +12,10 @@ import argparse
 import sys
 from pathlib import Path
 
-from scripts.paths import DOWNLOAD_ARCHIVE_FILE, RAW_VIDEOS_DIR, TRANSCRIPTS_DIR, setup_path
+from scripts.paths import DOWNLOAD_ARCHIVE_FILE, RAW_VIDEOS_DIR, TRANSCRIPTS_DIR, ensure_env_bin_on_path, setup_path
 
 setup_path()
+ensure_env_bin_on_path()
 
 from scripts.ingest.download_youtube import download_videos
 from scripts.transcribe.transcribe import load_faster_whisper_model, transcribe_file

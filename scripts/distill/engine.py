@@ -38,6 +38,9 @@ from scripts.paths import (
     PROMPTS_DIR,
     SKILL_DIR,
     SKILL_FILE,
+    SKILL_FRAMEWORKS_FILE,
+    SKILL_REFERENCES_BY_VIDEO_DIR,
+    SKILL_REFERENCES_DIR,
     TRANSCRIPTS_DIR,
     setup_path,
 )
@@ -229,47 +232,144 @@ def distill_one(
     raise ValueError(f"未知 backend: {backend}")
 
 
+def _title_from_stem(stem: str) -> str:
+    return stem.replace("_", " ").strip(".")
+
+
+def _sync_reference_videos(files: list[Path]) -> None:
+    """把 distilled/by_video 同步到 skill/references/by_video（skill 自包含）。"""
+    SKILL_REFERENCES_BY_VIDEO_DIR.mkdir(parents=True, exist_ok=True)
+    wanted = {f.name for f in files}
+    for old in SKILL_REFERENCES_BY_VIDEO_DIR.glob("*.md"):
+        if old.name not in wanted:
+            old.unlink()
+    for src in files:
+        dest = SKILL_REFERENCES_BY_VIDEO_DIR / src.name
+        dest.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
+
+
+def _write_frameworks_reference(files: list[Path]) -> None:
+    """精简框架速查（详情仍在 by_video）。"""
+    SKILL_REFERENCES_DIR.mkdir(parents=True, exist_ok=True)
+    lines = [
+        "# Core frameworks (quick lookup)",
+        "",
+        "Load the linked `references/by_video/*.md` when you need full verbatim samples.",
+        "",
+        "| Framework / move | Use when | Detail file |",
+        "|------------------|----------|------------|",
+        "| **HEALER storytelling** | Behavioral / achievement stories; anti-STAR | `by_video/How_to_tell_better_stories_in_interviews_to_stand_out_and_land_offers.md` |",
+        "| **SCQA** | Concise follow-ups / skills questions (ESL) | `by_video/How_to_communicate_and_speak_confidently_in_interviews_as_an_ESL_speaker.md` |",
+        "| **Three meta-questions** | Any interview Q maps here | `by_video/How_to_build_true_confidence_in_interviews_-_real_talk_from_a_hiring_manager.md` |",
+        "| **Skill + Action + Result** | Resume bullets | `by_video/Improve_your_resume_in_3_minutes_to_get_more_interviews.md` |",
+        "| **Problem → Skills → Achievement** | Pivot resume / break into role | `by_video/How_to_break_into_any_industry_or_job_title_a_practical_step_by_step_guide.md` |",
+        "| **Sandwich disagreement** | Say no / conflict at work | `by_video/How_to_reject_disagree_and_handle_conflict_with_your_coworkers_using_the_sandwich_method.md` |",
+        "| **Impact-first (X/Y/Z)** | Project / capability answers | `by_video/How_to_make_an_interviewer_think_you_re_capable.md` |",
+        "| **Thanks not sorry** | Workplace communication confidence | `by_video/Don_t_say_sorry_at_work._Say_this_instead..md` |",
+        "| **Amazon tracking updates** | Manager visibility | `by_video/How_to_get_noticed_recognized_and_rewarded_by_your_manager.md` |",
+        "",
+        f"*Synced from {len(files)} distilled Shorts. Prefer synthesizing patterns; open a by_video file only when you need that Short’s verbatim script.*",
+        "",
+    ]
+    # Only keep table rows whose detail files exist
+    existing = {f.name for f in files}
+    filtered: list[str] = []
+    for line in lines:
+        if line.startswith("| **") and "`by_video/" in line:
+            name = line.split("`by_video/")[1].split("`")[0]
+            if name not in existing:
+                continue
+        filtered.append(line)
+    SKILL_FRAMEWORKS_FILE.write_text("\n".join(filtered), encoding="utf-8")
+
+
 def merge_skill() -> Path:
+    """
+    按 Agent Skills 规范生成 skill 包：
+      data/skill/SKILL.md              # 短入口（角色 + 流程 + 索引）
+      data/skill/references/frameworks.md
+      data/skill/references/by_video/*.md
+    """
     parts_dir = DISTILLED_BY_VIDEO_DIR
     files = sorted(parts_dir.glob("*.md"))
     if not files:
         raise FileNotFoundError(f"没有蒸馏文件: {parts_dir}")
 
-    video_blocks: list[str] = []
-    for f in files:
-        title = f.stem.replace("_", " ")
-        body = f.read_text(encoding="utf-8")
-        body = re.sub(r"^<!--.*?-->\n*", "", body, flags=re.MULTILINE)
-        video_blocks.append(f"### {title}\n\n{body.strip()}")
+    _sync_reference_videos(files)
+    _write_frameworks_reference(files)
 
-    skill = f"""# Jonathan Interview Coach
+    index_lines = [
+        f"- [{_title_from_stem(f.stem)}](references/by_video/{f.name})" for f in files
+    ]
+    merged_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
-> Merged from **{len(files)}** Jonathan Career Shorts distillations.
-> **Use this file** as Claude Project Knowledge or a Claude Code skill.
-> Enable only for mock interviews — not for everyday chat.
+    skill = f"""---
+name: jonathan-interview-coach
+description: >-
+  Jonathan-style interview and workplace coaching from MrJonathanCareer Shorts.
+  Use for mock interviews, interview prep, behavioral stories, resume bullets,
+  offer negotiation, ESL communication, or when the user says 「Jonathan 模式」.
+---
+
+# Jonathan Interview Coach
+
+Lean skill entrypoint. **Detailed verbatim samples live in `references/`** — open them only when needed (progressive disclosure).
+
+- Distilled Shorts in package: **{len(files)}**
+- Last merged: {merged_at}
 
 ## Role
 
 You are a Jonathan-style interview coach.
 
-Your goal: help candidates improve through rigorous questioning — not by giving easy answers, but by exposing weak spots and teaching them how interviewers actually think.
+Goal: help candidates improve through rigorous questioning — expose weak spots and teach how interviewers actually think. Do **not** give easy polished answers without diagnosis.
 
-**Activation:** Only adopt this persona when the user explicitly asks for interview coaching, mock interviews, or says **「Jonathan 模式」**.
+**Activation:** Only adopt this persona when the user asks for interview coaching, mock interviews, interview prep, or says **「Jonathan 模式」**.
 
-## How to use this knowledge
+## Coaching loop
 
-- Synthesize patterns across videos below; do not quote transcripts verbatim.
-- When coaching, apply: principles → evaluation → follow-up questions → answer frameworks.
-- Be rigorous. Push for specifics, ownership, and measurable impact.
+1. Diagnose which of the three meta-questions the moment is really about:
+   - Are you the best candidate for the job?
+   - Is this the best job for you?
+   - Would I like working with you?
+2. Score the answer: clarity/structure, visible difficulty, business impact, ownership, collaboration under uncertainty.
+3. Ask sharp follow-ups until the answer is specific and evidence-based.
+4. Teach a framework, then have them **retry** the answer.
+5. Pull **verbatim templates** from `references/by_video/` only when a specific Short’s script is needed.
 
-## Video Insights（按 Short 蒸馏，随 pipeline 增量追加）
+## How to use references
 
+| Need | Open |
+|------|------|
+| Named frameworks (HEALER, SCQA, sandwich, resume formula…) | [`references/frameworks.md`](references/frameworks.md) |
+| Full good/bad + sample answers for one Short | [`references/by_video/`](references/by_video/) matching topic |
+| Default | Synthesize across Shorts; do **not** dump entire by_video files into the reply |
+
+Rules:
+
+- Prefer patterns over quoting whole transcripts.
+- Keep placeholders (X, Y, Z) when giving templates.
+- Be rigorous: push for specifics, ownership, measurable impact.
+- ESL candidates: structure > fancy vocabulary; clear beats “concise but incomprehensible.”
+
+## Topic map (start here, then open the matching file)
+
+- **Stories / HEALER / anti-STAR** → storytelling & capability Shorts in `references/by_video/`
+- **Classic Qs** (tell me about yourself, weakness, why leave, five years, why us) → classic-questions / leaving / weakness Shorts
+- **ESL / clarity / fillers / hedging / sorry→thanks** → ESL & communication Shorts
+- **Resume / LinkedIn / apply bar / negotiation** → job-search Shorts
+- **Manager / conflict / sandwich / collaboration capacity** → workplace Shorts
+- **AI-at-work interview answers** → AI Shorts
+- **Prep systems** (research / mock / final round) → prep Shorts
+
+## Source index
+
+{chr(10).join(index_lines)}
+
+---
+
+*Skill layout follows Agent Skills progressive disclosure: keep this file short; load `references/` on demand.*
 """
-    skill += "\n\n".join(video_blocks)
-    skill += "\n\n## Source index\n\n"
-    for f in files:
-        skill += f"- `{f.stem}`\n"
-    skill += f"\n---\n\n*Last merged: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')} | {len(files)} videos*\n"
 
     SKILL_DIR.mkdir(parents=True, exist_ok=True)
     SKILL_FILE.write_text(skill, encoding="utf-8")

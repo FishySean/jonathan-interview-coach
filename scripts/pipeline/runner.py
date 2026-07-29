@@ -17,6 +17,7 @@ from scripts.paths import (
     SKILL_FILE,
     TRANSCRIPTS_DIR,
     VIDEO_REGISTRY_FILE,
+    ensure_env_bin_on_path,
 )
 
 EventHandler = Callable[[str, dict[str, Any]], None]
@@ -103,6 +104,73 @@ def count_urls_file(path: Path) -> int:
     )
 
 
+def count_archive(path: Path | None = None) -> int:
+    """yt-dlp download archive 行数 = 历史上成功下载过的视频数。"""
+    archive = path or DOWNLOAD_ARCHIVE_FILE
+    if not archive.exists():
+        return 0
+    return sum(1 for line in archive.read_text(encoding="utf-8").splitlines() if line.strip())
+
+
+def collect_disk_stats(
+    *,
+    phase: str = "idle",
+    running: bool = False,
+    error: str = "",
+) -> PipelineStats:
+    """
+    从磁盘汇总累计进度（刷新页面 / 重启 app 后仍保留）。
+    - 链接：shorts_urls ∪ download_archive 去重
+    - 视频：archive 与 raw_videos 取较大（转录后会删 raw，靠 archive 记住）
+    - 转录 / 蒸馏：目录内文件数
+    """
+    try:
+        from scripts.pipeline.video_registry import extract_video_id
+
+        known_ids: set[str] = set()
+        if DOWNLOAD_ARCHIVE_FILE.exists():
+            for line in DOWNLOAD_ARCHIVE_FILE.read_text(
+                encoding="utf-8", errors="replace"
+            ).splitlines():
+                parts = line.split()
+                if parts:
+                    known_ids.add(parts[-1])
+        archive_n = len(known_ids)
+
+        if SHORTS_URLS_FILE.exists():
+            for line in SHORTS_URLS_FILE.read_text(
+                encoding="utf-8", errors="replace"
+            ).splitlines():
+                text = line.strip()
+                if not text or text.startswith("#"):
+                    continue
+                vid = extract_video_id(text)
+                if vid:
+                    known_ids.add(vid)
+
+        raw_n = count_videos(RAW_VIDEOS_DIR)
+        return PipelineStats(
+            urls_found=len(known_ids),
+            videos_total=max(archive_n, raw_n),
+            transcripts_total=count_transcripts(TRANSCRIPTS_DIR),
+            distilled_total=count_distilled(),
+            phase=phase,
+            running=running,
+            error=error,
+        )
+    except Exception as exc:
+        # 绝不能让 /api/status 因磁盘读失败而 500
+        return PipelineStats(
+            urls_found=count_urls_file(SHORTS_URLS_FILE),
+            videos_total=max(count_archive(), count_videos(RAW_VIDEOS_DIR)),
+            transcripts_total=count_transcripts(TRANSCRIPTS_DIR),
+            distilled_total=count_distilled(),
+            phase=phase,
+            running=running,
+            error=error or f"disk stats partial: {exc}",
+        )
+
+
 def _emit(handler: EventHandler | None, kind: str, message: str, **data: Any) -> None:
     if handler:
         handler(kind, {"message": message, **data})
@@ -116,6 +184,15 @@ def _emit_phase(
 ) -> None:
     stats.phase = phase
     _emit(handler, "phase", message, phase=phase, stats=stats.to_dict())
+
+
+def _apply_disk_floor(stats: PipelineStats) -> None:
+    """把磁盘累计进度抬到 stats 上（页面刷新 / 清理 raw 后仍显示历史数）。"""
+    disk = collect_disk_stats()
+    stats.urls_found = max(stats.urls_found, disk.urls_found)
+    stats.videos_total = max(stats.videos_total, disk.videos_total)
+    stats.transcripts_total = max(stats.transcripts_total, disk.transcripts_total)
+    stats.distilled_total = max(stats.distilled_total, disk.distilled_total)
 
 
 def _parse_progress_line(line: str) -> tuple[int, int] | None:
@@ -138,6 +215,8 @@ def _run_streaming(
     cwd: Path,
     on_line: Callable[[str], None] | None = None,
 ) -> None:
+    # 保证子进程能找到与当前 Python 同环境的 ffmpeg（未 activate 时也可用）
+    env = {**__import__("os").environ, "PATH": ensure_env_bin_on_path()}
     process = subprocess.Popen(
         cmd,
         cwd=str(cwd),
@@ -145,6 +224,7 @@ def _run_streaming(
         stderr=subprocess.STDOUT,
         text=True,
         bufsize=1,
+        env=env,
     )
     assert process.stdout is not None
     for line in process.stdout:
@@ -178,6 +258,7 @@ def run_pipeline(
     _emit(on_event, "status", "流程启动", stats=stats.to_dict())
 
     try:
+        did_transcribe = False
         maybe_install_requirements(config, on_event)
 
         # 1) 抓取 Shorts URL
@@ -209,10 +290,11 @@ def run_pipeline(
             on_line=lambda line: _emit(on_event, "log", line, phase="fetch"),
         )
         stats.urls_found = count_urls_file(config.urls_out)
+        _apply_disk_floor(stats)
         _emit(
             on_event,
             "progress",
-            f"待处理 Shorts 链接: {stats.urls_found} 个",
+            f"待处理 Shorts 链接: {count_urls_file(config.urls_out)} 个（累计已知 {stats.urls_found}）",
             phase="fetch",
             stats=stats.to_dict(),
         )
@@ -227,7 +309,7 @@ def run_pipeline(
             config.skip_download = True
             config.skip_transcribe = True
 
-        # 2) 下载
+        # 2) 下载（失败时若本地已有完整视频，继续转录 —— 断点续跑）
         if not config.skip_download:
             stats.phase = "download"
             _emit_phase(on_event, stats, "download", "正在下载视频…")
@@ -242,11 +324,23 @@ def run_pipeline(
                 "--registry",
                 str(VIDEO_REGISTRY_FILE),
             ]
-            _run_streaming(
-                download_cmd,
-                cwd=PROJECT_ROOT,
-                on_line=lambda line: _emit(on_event, "log", line, phase="download"),
-            )
+            try:
+                _run_streaming(
+                    download_cmd,
+                    cwd=PROJECT_ROOT,
+                    on_line=lambda line: _emit(on_event, "log", line, phase="download"),
+                )
+            except subprocess.CalledProcessError:
+                stats.videos_total = count_videos(RAW_VIDEOS_DIR)
+                if stats.videos_total > 0:
+                    _emit(
+                        on_event,
+                        "log",
+                        f"下载步骤有错误，但 raw_videos/ 已有 {stats.videos_total} 个完整视频，继续转录（断点续跑）",
+                        phase="download",
+                    )
+                else:
+                    raise
             stats.videos_total = count_videos(RAW_VIDEOS_DIR)
             _emit(
                 on_event,
@@ -258,6 +352,31 @@ def run_pipeline(
         else:
             stats.videos_total = count_videos(RAW_VIDEOS_DIR)
             _emit(on_event, "log", "已跳过下载步骤", phase="download")
+
+        # 2.5) 下载后若有未合并分片，先合并再转录
+        if not config.skip_transcribe:
+            from scripts.tools.merge_raw_fragments import merge_orphaned_fragments
+
+            try:
+                merged, _skipped, merge_failed = merge_orphaned_fragments(RAW_VIDEOS_DIR)
+                if merged:
+                    _emit(
+                        on_event,
+                        "log",
+                        f"已合并 {merged} 组未完成的音视频分片",
+                        phase="download",
+                    )
+                if merge_failed:
+                    raise RuntimeError(f"{merge_failed} 组分片合并失败，无法继续转录")
+            except RuntimeError as exc:
+                raise RuntimeError(str(exc)) from exc
+
+            stats.videos_total = count_videos(RAW_VIDEOS_DIR)
+            if stats.videos_total == 0 and stats.urls_found > 0:
+                raise RuntimeError(
+                    "下载步骤后 raw_videos/ 仍无可转录的完整视频。"
+                    "常见原因：ffmpeg 未找到，只留下了 *.f137.mp4 / *.f140.m4a 分片。"
+                )
 
         # 3) 转录
         if not config.skip_transcribe:
@@ -333,6 +452,7 @@ def run_pipeline(
                 cwd=PROJECT_ROOT,
                 on_line=on_transcribe_line,
             )
+            did_transcribe = True
             stats.transcripts_total = count_transcripts(TRANSCRIPTS_DIR)
             _emit(
                 on_event,
@@ -419,19 +539,19 @@ def run_pipeline(
         else:
             _emit(on_event, "log", "已跳过蒸馏步骤", phase="distill")
 
-        # 5) 清理本地视频（转录后删 + 流程结束兜底清空 raw_videos/）
-        if config.delete_video_after_transcribe:
+        # 5) 仅在实际跑过转录后清理 raw_videos（避免「无新 URL」时误删待转录文件）
+        if config.delete_video_after_transcribe and did_transcribe:
             from scripts.transcribe.transcribe import cleanup_raw_videos_dir
 
             stats.phase = "cleanup"
             _emit_phase(on_event, stats, "cleanup", "正在清理本地视频文件…")
             deleted = cleanup_raw_videos_dir(RAW_VIDEOS_DIR)
-            stats.videos_total = count_videos(RAW_VIDEOS_DIR)
+            _apply_disk_floor(stats)
             if deleted:
                 _emit(
                     on_event,
                     "progress",
-                    f"已清理 {len(deleted)} 个本地视频（transcript 已保留）",
+                    f"已清理 {len(deleted)} 个本地视频（transcript 已保留；已下载累计 {stats.videos_total}）",
                     phase="cleanup",
                     stats=stats.to_dict(),
                 )
@@ -442,10 +562,17 @@ def run_pipeline(
                     "raw_videos/ 无残留视频文件",
                     phase="cleanup",
                 )
+        elif config.delete_video_after_transcribe and not did_transcribe:
+            _emit(
+                on_event,
+                "log",
+                "未执行转录，跳过清理 raw_videos/（保留本地视频）",
+                phase="cleanup",
+            )
 
         stats.phase = "done"
         stats.running = False
-        stats.distilled_total = count_distilled()
+        _apply_disk_floor(stats)
         _emit(
             on_event,
             "done",
@@ -458,5 +585,6 @@ def run_pipeline(
         stats.running = False
         stats.phase = "error"
         stats.error = str(exc)
+        _apply_disk_floor(stats)
         _emit(on_event, "error", f"流程失败: {exc}", stats=stats.to_dict())
         raise
