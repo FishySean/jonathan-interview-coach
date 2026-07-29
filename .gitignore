@@ -14,6 +14,8 @@ data/distilled/*
 !data/distilled/.gitkeep
 !data/distilled/by_video/.gitkeep
 data/.video_registry.json
+data/shorts_urls.txt
+data/download_archive.txt
 data/skill/*
 !data/skill/.gitkeep
 !data/skill/SKILL.md

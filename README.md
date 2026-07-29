@@ -44,7 +44,9 @@ jonathan-interview-coach/
 │   ├── raw_videos/      # L1 视频（转录后自动删除）
 │   ├── transcripts/     # L2 转录文本
 │   ├── distilled/       # L3 按视频蒸馏（by_video/）
-│   └── skill/           # L4 ★ Skill 产物（SKILL.md + README + CHANGELOG）
+│   ├── skill/           # L4 ★ Skill 产物（SKILL.md + README + CHANGELOG）
+│   ├── shorts_urls.txt      # 运行时 URL 列表（gitignore）
+│   └── download_archive.txt # 运行时下载记录（gitignore）
 ├── scripts/             # 自动化脚本（按功能分子目录）
 │   ├── paths.py         # 共享路径常量
 │   ├── ingest/          # L1 抓取 + 下载
@@ -64,9 +66,8 @@ jonathan-interview-coach/
 | 文件 | 本项目用途 |
 |------|------------|
 | `app.py` | **主入口**：启动可视化界面 |
-| `app.command` | macOS 双击版启动器（可选） |
-| `scripts/cli/run_channel_shorts_to_transcripts.py` | 高级用户 CLI 入口（可选，兼容旧路径） |
-| `python -m scripts.pipeline.runner` | 同上，推荐写法 |
+| `./run` | Shell 启动器（自动激活 conda 环境） |
+| `python -m scripts.cli.run_channel_shorts_to_transcripts` | CLI 全流程 |
 
 ## 当前进度（MVP）
 
@@ -103,7 +104,7 @@ python app.py
 Python 路径：`/opt/anaconda3/envs/jonathan-coach/bin/python`
 
 > **注意**：不要用系统自带的 `/usr/local/bin/python3` 直接跑 `app.py`，它没有装项目依赖。  
-> 在 Cursor 里运行前，请先 `conda activate jonathan-coach`，或双击 `app.command`（会自动激活环境）。
+> 在 Cursor 里运行前，请先 `conda activate jonathan-coach`，或执行 `./run`。
 
 ### 备选：pip + venv（不用 conda 时）
 
@@ -122,12 +123,12 @@ pip install -r requirements.txt
 python3 app.py
 ```
 
-或 macOS 双击 `app.command`。
+或执行 `./run`。
 
 页面功能：
 - 点 **开始运行** 一键执行全流程
 - 实时广播：当前阶段、日志、已处理数量
-- 展示产物路径：`shorts_urls.txt`、`data/raw_videos/`、`data/transcripts/`
+- 展示产物路径：`data/shorts_urls.txt`、`data/raw_videos/`、`data/transcripts/`
 
 首次运行会自动安装依赖。
 
@@ -158,8 +159,8 @@ python -m scripts.cli.run_channel_shorts_to_transcripts \
 ```
 
 脚本会依次完成：
-- 抓取 Shorts URL → 写入 `shorts_urls.txt`
-- 下载 → `raw_videos/`（通过 `download_archive.txt` 避免重复）
+- 抓取 Shorts URL → 写入 `data/shorts_urls.txt`
+- 下载 → `data/raw_videos/`（通过 `data/download_archive.txt` 避免重复）
 - 转录 → `transcripts/`
 
 ### 可选：分步执行
@@ -178,7 +179,7 @@ python -m scripts.ingest.fetch_channel_shorts \
 ```bash
 python -m scripts.ingest.download_youtube \
   --file urls.txt \
-  --download-archive download_archive.txt
+  --download-archive data/download_archive.txt
 ```
 
 ### Step 3：转录为文字

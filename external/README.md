@@ -45,7 +45,7 @@ pip install -r requirements.txt   ← 只在安装时联网一次
 
 | 目标 | 做法 |
 |------|------|
-| 不重复下载视频 | 已有 `download_archive.txt`（yt-dlp archive） |
+| 不重复下载视频 | 已有 `data/download_archive.txt`（yt-dlp archive） |
 | 不重复转录 | `transcribe.py` 默认跳过已存在的 transcript |
 | 模型只下过一次 | 把缓存放到 `external/hf_cache/`（见下方） |
 | 看清用了啥工具 | clone 源码到 external/ + 看本文档 |

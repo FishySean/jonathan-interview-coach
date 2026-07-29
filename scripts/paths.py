@@ -23,8 +23,8 @@ DISTILLED_BY_VIDEO_DIR = DISTILLED_DIR / "by_video"
 EXTERNAL_DIR = PROJECT_ROOT / "external"
 PROMPTS_DIR = PROJECT_ROOT / "prompts"
 
-SHORTS_URLS_FILE = PROJECT_ROOT / "shorts_urls.txt"
-DOWNLOAD_ARCHIVE_FILE = PROJECT_ROOT / "download_archive.txt"
+SHORTS_URLS_FILE = DATA_DIR / "shorts_urls.txt"
+DOWNLOAD_ARCHIVE_FILE = DATA_DIR / "download_archive.txt"
 DISTILL_INDEX_FILE = DISTILLED_DIR / ".distill_index.json"
 VIDEO_REGISTRY_FILE = DATA_DIR / ".video_registry.json"
 

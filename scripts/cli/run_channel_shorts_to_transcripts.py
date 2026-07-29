@@ -7,20 +7,18 @@ import argparse
 import sys
 from pathlib import Path
 
-from scripts.paths import setup_path
+from scripts.paths import DOWNLOAD_ARCHIVE_FILE, SHORTS_URLS_FILE, setup_path
+from scripts.pipeline import PipelineConfig, run_pipeline
 
 setup_path()
-
-from scripts.paths import PROJECT_ROOT
-from scripts.pipeline import PipelineConfig, run_pipeline
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="频道 Shorts → raw_videos → transcripts")
     parser.add_argument("--channel", default="@MrJonathanCareer")
     parser.add_argument("--channel-url", default=None)
-    parser.add_argument("--urls-out", type=Path, default=PROJECT_ROOT / "shorts_urls.txt")
-    parser.add_argument("--download-archive", type=Path, default=PROJECT_ROOT / "download_archive.txt")
+    parser.add_argument("--urls-out", type=Path, default=SHORTS_URLS_FILE)
+    parser.add_argument("--download-archive", type=Path, default=DOWNLOAD_ARCHIVE_FILE)
     parser.add_argument("--max-videos", type=int, default=0)
     parser.add_argument("--skip-download", action="store_true")
     parser.add_argument("--skip-transcribe", action="store_true")

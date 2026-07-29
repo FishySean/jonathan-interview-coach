@@ -10,6 +10,7 @@ from typing import Any, Callable
 
 from scripts.paths import (
     DISTILLED_BY_VIDEO_DIR,
+    DOWNLOAD_ARCHIVE_FILE,
     PROJECT_ROOT,
     RAW_VIDEOS_DIR,
     SHORTS_URLS_FILE,
@@ -43,8 +44,8 @@ class PipelineConfig:
     skip_processed_videos: bool = True
     delete_video_after_transcribe: bool = True
     auto_install_requirements: bool = False
-    urls_out: Path = field(default_factory=lambda: PROJECT_ROOT / "shorts_urls.txt")
-    download_archive: Path = field(default_factory=lambda: PROJECT_ROOT / "download_archive.txt")
+    urls_out: Path = field(default_factory=lambda: SHORTS_URLS_FILE)
+    download_archive: Path = field(default_factory=lambda: DOWNLOAD_ARCHIVE_FILE)
 
 
 @dataclass

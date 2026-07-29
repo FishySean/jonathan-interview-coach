@@ -1,6 +1,0 @@
-# Jonathan YouTube Shorts URL 列表示例
-# 每行一个 URL，# 开头为注释
-# 复制此文件为 urls.txt 并填入真实链接
-
-# https://www.youtube.com/shorts/xxxxxxxxxxx
-# https://www.youtube.com/shorts/yyyyyyyyyyy

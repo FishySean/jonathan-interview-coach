@@ -17,7 +17,7 @@ from typing import Any
 
 import yt_dlp
 
-from scripts.paths import PROJECT_ROOT, VIDEO_REGISTRY_FILE, setup_path
+from scripts.paths import PROJECT_ROOT, SHORTS_URLS_FILE, setup_path
 from scripts.pipeline.video_registry import VideoRegistry, extract_video_id
 
 setup_path()
@@ -131,7 +131,7 @@ def main() -> None:
     parser.add_argument(
         "--output",
         type=Path,
-        default=PROJECT_ROOT / "shorts_urls.txt",
+        default=SHORTS_URLS_FILE,
         help="输出 urls 文件（每行一个 URL）",
     )
     parser.add_argument(
