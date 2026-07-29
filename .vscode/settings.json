@@ -1,0 +1,4 @@
+{
+  "python.defaultInterpreterPath": "/opt/anaconda3/envs/jonathan-coach/bin/python",
+  "python.terminal.activateEnvironment": true
+}

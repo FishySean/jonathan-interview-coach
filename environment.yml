@@ -1,0 +1,12 @@
+name: jonathan-coach
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - ffmpeg
+  - pip
+  - pip:
+      - yt-dlp>=2024.1.0
+      - faster-whisper>=1.0.0
+      - flask>=3.0.0

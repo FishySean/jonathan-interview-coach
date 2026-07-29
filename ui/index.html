@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jonathan Interview Coach</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/assets/style.css" />
+</head>
+<body>
+  <div class="bg-orbs" aria-hidden="true">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+
+  <main class="shell">
+    <header class="hero fade-in">
+      <div class="hero-row">
+        <p class="eyebrow">Auto Pipeline</p>
+        <button id="shutdownBtn" class="icon-btn" type="button" title="关闭本地服务" aria-label="关机">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M12 2v10"/><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/>
+          </svg>
+          <span>关机</span>
+        </button>
+      </div>
+      <h1>Jonathan <em>Interview Coach</em></h1>
+      <p class="subtitle">一键抓取 Shorts → 下载 → 转录。像自动贩卖机一样，按下开始，等待出货。</p>
+    </header>
+
+    <section class="panel controls fade-in delay-1">
+      <div class="controls-main">
+        <div class="field">
+          <label for="channel">频道</label>
+          <input id="channel" type="text" value="@MrJonathanCareer" />
+        </div>
+        <div class="field">
+          <div class="field-label-row">
+            <label for="maxVideos">数量上限</label>
+            <span class="label-tag" title="填 0 表示不限制">0 = 全量</span>
+          </div>
+          <input id="maxVideos" type="number" min="0" value="10" />
+        </div>
+        <div class="field">
+          <label for="model">Whisper 模型</label>
+          <select id="model">
+            <option value="small" selected>small（快）</option>
+            <option value="medium">medium（更稳）</option>
+            <option value="base">base</option>
+          </select>
+        </div>
+        <button id="startBtn" class="start-btn" type="button">
+          <span class="btn-glow"></span>
+          <span class="btn-label">开始运行</span>
+        </button>
+      </div>
+
+      <details class="controls-advanced">
+        <summary>高级选项</summary>
+        <div class="advanced-grid">
+          <div class="field field-check">
+            <label class="checkbox-label">
+              <input id="autoDistill" type="checkbox" />
+              转录后自动蒸馏
+            </label>
+            <span class="hint">默认关闭；你在 Cursor 里手动蒸馏即可</span>
+          </div>
+          <div class="field">
+            <label for="distillBackend">蒸馏后端</label>
+            <select id="distillBackend">
+              <option value="auto" selected>auto（自动检测）</option>
+              <option value="ollama">Ollama（本地）</option>
+              <option value="openai">OpenAI</option>
+              <option value="anthropic">Anthropic</option>
+            </select>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <section class="stats fade-in delay-2">
+      <article class="stat-card" data-phase="fetch">
+        <p class="stat-label">链接</p>
+        <p class="stat-value" id="statUrls">0</p>
+        <p class="stat-desc">Shorts URL</p>
+      </article>
+      <article class="stat-card" data-phase="download">
+        <p class="stat-label">视频</p>
+        <p class="stat-value" id="statVideos">0</p>
+        <p class="stat-desc">raw_videos/</p>
+      </article>
+      <article class="stat-card" data-phase="transcribe">
+        <p class="stat-label">转录</p>
+        <p class="stat-value" id="statTranscripts">0</p>
+        <p class="stat-desc">transcripts/</p>
+      </article>
+      <article class="stat-card" data-phase="distill">
+        <p class="stat-label">蒸馏</p>
+        <p class="stat-value" id="statDistilled">0</p>
+        <p class="stat-desc">distilled/</p>
+      </article>
+    </section>
+
+    <section class="panel progress-panel fade-in delay-3">
+      <div class="progress-header">
+        <span id="phaseLabel" class="phase-label">待命</span>
+        <span id="phaseBadge" class="phase-badge idle">IDLE</span>
+      </div>
+      <div class="progress-track">
+        <div id="progressBar" class="progress-bar"></div>
+      </div>
+      <div class="paths paths-grid">
+        <div><strong>URL 列表</strong><code id="pathUrls">shorts_urls.txt</code></div>
+        <div><strong>视频目录</strong><code id="pathVideos">data/raw_videos/</code></div>
+        <div><strong>转录目录</strong><code id="pathTranscripts">data/transcripts/</code></div>
+        <div><strong>Skill 文件</strong><code id="pathSkill">data/skill/SKILL.md</code></div>
+      </div>
+    </section>
+
+    <section class="panel log-panel fade-in delay-4">
+      <div class="log-header">
+        <h2>实时广播</h2>
+        <button id="clearLog" type="button" class="ghost-btn">清空</button>
+      </div>
+      <div id="logFeed" class="log-feed"></div>
+    </section>
+  </main>
+
+  <div id="shutdownOverlay" class="shutdown-overlay hidden" aria-live="polite">
+    <div class="shutdown-card">
+      <p class="shutdown-title">服务已关闭</p>
+      <p class="shutdown-desc">可以关掉此浏览器标签页。下次运行：<code>python app.py</code></p>
+    </div>
+  </div>
+
+  <script src="/assets/app.js"></script>
+</body>
+</html>

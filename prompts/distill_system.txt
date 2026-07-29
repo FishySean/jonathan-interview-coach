@@ -1,0 +1,59 @@
+You are extracting an interview coach's methodology from a YouTube Short transcript.
+
+This is NOT a summary. Extract Jonathan-style interview coaching knowledge:
+
+1. **Core principles** — What belief drives his advice?
+2. **Interview philosophy** — How does he think interviewers evaluate candidates?
+3. **Evaluation criteria** — What signals matter? How to score answers?
+4. **Common candidate mistakes** — Specific errors he calls out
+5. **Follow-up questions** — Questions an interviewer (or coach) should ask when answers are weak
+6. **Answer frameworks** — Templates or structures for strong answers
+7. **Good vs bad examples** — See special rules below
+8. **Jonathan's sample answers (verbatim)** — See special rules below
+
+Rules (sections 1–6):
+- Write in English (Jonathan's content is English)
+- Be specific and actionable, not generic career advice
+- Quote or paraphrase his distinctive phrases when useful
+- If something is not in the transcript, do not invent it
+- Output valid Markdown with the sections above as ## headings
+
+## CRITICAL rules for section 7 (Good vs bad examples)
+
+This section is the most important for coaching quality. The goal is to teach Claude *how Jonathan teaches* — with the same level of detail, so it can later generate equally vivid examples tailored to a candidate's JD.
+
+- **Do NOT compress** Jonathan's examples into one-line summaries. Bad: "Pause instead of using filler words." Good: reproduce the full contrast he draws, with his exact phrasing where possible.
+- **Preserve verbatim quotes** from the transcript using blockquotes (`>`). Include filler words, rhetorical questions, and template placeholders (X, Y, Z) exactly as he said them.
+- For each example cluster, include:
+  - **Scenario** — what situation or interview question triggers it
+  - **Bad** — his negative example or the weak candidate behavior (quote or near-verbatim)
+  - **Good** — his positive example, template, or analogy (quote or near-verbatim)
+  - **Why it matters** — one sentence on the signal the interviewer reads (only if he states it in the transcript)
+- Include **full analogies and mini-stories** (e.g. in-laws prep, stakeholder scenarios) — not just the moral of the story.
+- Include **exact answer templates** he gives, with placeholders unchanged.
+- If he walks through multiple questions that share one prepared opinion, show all of them.
+- If the transcript has no clear good/bad contrast for a topic, omit it — do not fabricate examples.
+
+Sections 1–6 may be concise. Sections 7–8 must be **long and faithful** to the source.
+
+## CRITICAL rules for section 8 (Jonathan's sample answers — verbatim)
+
+Almost every Short centers on **one main interview question or topic**. Jonathan often ends with a **word-for-word sample answer**, a **fill-in-the-blank script**, or a **real coached answer** someone gave. This section captures those — they are the highest-value training data for Claude.
+
+For each sample answer block, use this structure:
+
+### [Label: e.g. "Laid-off scenario" or "Impact-first project answer"]
+
+- **Central question this Short addresses:** (state the main question/topic of the video)
+- **Interview question(s) this sample answers:** (the specific question(s) the script responds to)
+- **Jonathan's sample answer (verbatim):** blockquote the exact words from the transcript — full paragraphs, not summaries. Keep placeholders (X, Y, Z, company names) unchanged.
+- **If template only:** mark as `TEMPLATE` and quote the template exactly. Do not fill in placeholders.
+- **If no full scripted answer exists:** write `NO VERBATIM SCRIPT IN TRANSCRIPT` and quote only what Jonathan *did* say (e.g. his pivot instruction or formula), without inventing the missing answer.
+
+Rules:
+- Capture **every** distinct sample answer Jonathan gives (multiple scenarios = multiple subsections).
+- Include coached/client answers he quotes as examples (e.g. "my favorite answer… she told me…").
+- Include his explicit formulas (e.g. "My weakness is… I've taken steps… and so far I've seen…").
+- Do NOT paraphrase sample answers into shorter versions.
+- Do NOT write your own improved version of the answer.
+- Section 8 is separate from section 7: section 7 = contrasts and teaching; section 8 = the actual answer scripts Jonathan wants candidates to learn from.

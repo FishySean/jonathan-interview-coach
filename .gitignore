@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+
+# 数据文件（体积大，不入库）
+data/raw_videos/*
+!data/raw_videos/.gitkeep
+data/transcripts/*
+!data/transcripts/.gitkeep
+data/distilled/*
+!data/distilled/.gitkeep
+!data/distilled/by_video/.gitkeep
+data/.video_registry.json
+data/skill/*
+!data/skill/.gitkeep
+!data/skill/SKILL.md
+!data/skill/README.md
+!data/skill/CHANGELOG.md
+
+# 第三方 clone / 大文件（保留说明文档）
+external/*
+!external/README.md
+!external/.gitkeep
+
+# macOS
+.DS_Store

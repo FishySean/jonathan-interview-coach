@@ -1,0 +1,12 @@
+# YouTube 下载
+yt-dlp>=2024.1.0
+
+# 语音转文字（二选一，推荐 faster-whisper）
+faster-whisper>=1.0.0
+
+# 可视化界面
+flask>=3.0.0
+
+# LLM 蒸馏（OpenAI 推荐；Anthropic 可选）
+openai>=1.40.0
+# anthropic>=0.40.0

@@ -1,0 +1,8 @@
+#!/bin/zsh
+# 项目启动器：始终使用 conda 环境，避免误用系统 Python
+set -e
+cd "$(dirname "$0")"
+
+source "$(conda info --base)/etc/profile.d/conda.sh"
+conda activate jonathan-coach
+exec python app.py
