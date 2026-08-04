@@ -285,7 +285,7 @@ ANTHROPIC_API_KEY=sk-ant-...
 
 ## 常见问题
 
-**下载失败？** 确认 yt-dlp 为最新版：`pip install -U yt-dlp`
+**下载失败？** 确认依赖完整：`pip install -U 'yt-dlp[default]'`（含 JS challenge 求解器）。Chrome 登录 YouTube 后关掉浏览器再跑；可用 `JONATHAN_COACH_COOKIES_FROM_BROWSER=chrome`。
 
 **转录很慢？** 先用 `--model small` 或 `--model base` 快速验证 pipeline；有 NVIDIA GPU 时 faster-whisper 会自动加速。
 

@@ -14,4 +14,4 @@ Load the linked `references/by_video/*.md` when you need full verbatim samples.
 | **Thanks not sorry** | Workplace communication confidence | `by_video/Don_t_say_sorry_at_work._Say_this_instead..md` |
 | **Amazon tracking updates** | Manager visibility | `by_video/How_to_get_noticed_recognized_and_rewarded_by_your_manager.md` |
 
-*Synced from 48 distilled Shorts. Prefer synthesizing patterns; open a by_video file only when you need that Short’s verbatim script.*
+*Synced from 125 distilled Shorts. Prefer synthesizing patterns; open a by_video file only when you need that Short’s verbatim script.*

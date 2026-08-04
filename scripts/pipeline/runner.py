@@ -289,17 +289,19 @@ def run_pipeline(
             cwd=PROJECT_ROOT,
             on_line=lambda line: _emit(on_event, "log", line, phase="fetch"),
         )
-        stats.urls_found = count_urls_file(config.urls_out)
+        pending_urls = count_urls_file(config.urls_out)
+        stats.urls_found = pending_urls
         _apply_disk_floor(stats)
         _emit(
             on_event,
             "progress",
-            f"待处理 Shorts 链接: {count_urls_file(config.urls_out)} 个（累计已知 {stats.urls_found}）",
+            f"待处理 Shorts 链接: {pending_urls} 个（累计已知 {stats.urls_found}）",
             phase="fetch",
             stats=stats.to_dict(),
         )
 
-        if stats.urls_found == 0:
+        # 必须以「本轮抓取到的待处理链接」为准；勿用累计 disk floor 误判为还要下载
+        if pending_urls == 0:
             _emit(
                 on_event,
                 "log",
@@ -340,7 +342,14 @@ def run_pipeline(
                         phase="download",
                     )
                 else:
-                    raise
+                    raise RuntimeError(
+                        "下载全部失败（常见原因：YouTube 429 / bot 验证 / JS challenge）。\n"
+                        "处理建议：\n"
+                        "1) Chrome 登录 youtube.com 后先关掉 Chrome\n"
+                        "2) 终端执行: export JONATHAN_COACH_COOKIES_FROM_BROWSER=chrome\n"
+                        "3) pip install -U 'yt-dlp[default]'（含 yt-dlp-ejs）\n"
+                        "4) 数量上限先改成 1～3，等 10～30 分钟再跑"
+                    ) from None
             stats.videos_total = count_videos(RAW_VIDEOS_DIR)
             _emit(
                 on_event,

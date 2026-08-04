@@ -4,6 +4,193 @@ All notable updates to the `data/skill/` package.
 
 ---
 
+## [1.3.17] — 2026-08-04
+
+### Added
+
+- **Manager without title** — mentorship + lead-without-authority + leadership philosophy
+- **Friends earn more** — stretch × stay, not harder work
+- **Go off-script** — live revise + guide intro; show don’t tell
+- **Close the help loop** — Benjamin Franklin effect follow-up (tried XYZ → how it helped)
+
+### Videos in skill (105)
+
+---
+
+## [1.3.16] — 2026-08-04
+
+### Added
+
+- **Stop freezing** — admit gap → reframe core skill → proof story (Power BI → visual communication)
+
+### Videos in skill (101)
+
+---
+
+## [1.3.15] — 2026-08-04
+
+### Added
+
+- **Interview closing signals** — Friday callback / start-offer Qs / vague next steps + always-do trio
+- **Introvert workplace game** — recharge, async TLDR, French exit, depth over volume
+- **15-min last-minute prep** — values / business / interviewer triangle
+- **1-hour last-minute prep** — company + AI JD persona + 3 stories
+- **Speak up (ACT)** — Assert credibility → Contextualize (social proof) → Trigger action
+
+### Videos in skill (100)
+
+---
+
+## [1.3.14] — 2026-08-04
+
+### Added
+
+- **5 white-flag phrases** — never done / bad manager / thin XP / don’t know / any role → rewrites
+- **Offer replies** — negotiate, delay with leverage, graceful reject, grateful accept
+- **Forage experience** — day projects → problem/skills/achievement + ATS boost
+- **Office-party social** — observation → deeper+self → circle-back goodbye
+- **First 30s likeability** — name + LinkedIn small talk + smile
+- **Fail to learn** — process > success; interview for useful rejection
+- **Falling pitch** — powerful statements end down, not up
+- **Scarcity trap** — never let fear set offer price; negotiate
+- **Record & review** — audio / video / transcript three-pass
+- **Why here** — invested long-term plan, not “I like culture”
+
+### Videos in skill (95)
+
+---
+
+## [1.3.13] — 2026-08-04
+
+### Added
+
+- **Powerful speaker** — English rhythm: pauses + pace variation
+- **End-of-interview questions** — upgrade bank (value story, 90-day rock, clarify fit)
+- **If we don’t hire you** — disappointment + respect + X/Y/Z + “no = not yet”
+- **Greatest weakness** — non-critical → impact → risk register results
+- **No-problem resume** — skill-first learn, Forge/Upwork, drop locations, SAR + estimate
+- **SCQA in meetings** — Situation/Complication/Question/Answer for leaders
+- **One-sentence standout** — Most people X / I do Y / because Z + short proof
+- **Maternity leave 4A** — Acknowledge, Assure, Affirm, Align + transition plan
+- **HEALER stories** — stop STAR reports; Hook→Emergency→Approach→Launch→Effect→Reflection
+- **5-year goals (SIP)** — Skills 3–6mo → Impact 1–2y → People y5; inputs not titles
+
+### Videos in skill (85)
+
+---
+
+## [1.3.12] — 2026-08-03
+
+### Added
+
+- **3 resume mistakes** — one-line candidate statement; work > projects; impact bullets with numbers
+- **30-minute self-intro (HAS)** — JD competencies → tagline → Hook / Achievement / So what + Meta sample
+- **Don’t let anyone price you** — reject pay gaslighting; market proof; “price reflects value” as ask-for-more fuel
+- **Leadership finals (VA)** — Values → Experience → Achievement + “who do you look up to” sample
+- **Apply first** — LinkedIn under-10 + last-hour (3600) filters
+- **Achievement CPR** — brain dump → Challenge/Validation/Impact → boss-level reframe + $5M landing-page rewrite
+- **Next-round intel** — recruiter ally email for focus/feedback (stats/tech heads-up story)
+- **ESL meeting lead** — full warm→agenda→facilitate→table→async close script
+- **3 question types** — behavioral vs situational vs common; Most people X / I do Y / because Z
+
+### Videos in skill (75)
+
+### Skipped
+
+- **The secret life of a career coach** — no usable speech in ASR (end-card only); parked under `transcripts/_skipped/`
+
+---
+
+## [1.3.11] — 2026-07-30
+
+### Added
+
+- **Thank-you email that gets offers** — Three G’s (gratitude, gap, gift) + full sample email
+- **3 chances to be a high performer** — outputs > effort; soft skills multiply; politics as influence
+
+### Videos in skill (66)
+
+---
+
+## [1.3.10] — 2026-07-30
+
+### Added
+
+- **Unexpected interview situations** — late/short time, tool gaps, long brief, personal Qs, closing hesitation ask
+- **AI interview prep** — natural intelligence first; JD teardown + competencies → only-you intro
+
+### Videos in skill (64)
+
+---
+
+## [1.3.9] — 2026-07-30
+
+### Added
+
+- **Get through hard times** — flow not survival; perspective + smart vs stupid risk
+
+### Videos in skill (62)
+
+---
+
+## [1.3.8] — 2026-07-30
+
+### Added
+
+- **Promoted every 2 years / 5x salary** — market sets pace; companies promote when they need you, not when you deserve it
+
+### Videos in skill (61)
+
+---
+
+## [1.3.7] — 2026-07-30
+
+### Added
+
+- **True confidence from within** — identity who acts; evidence over emotions; do it scared
+
+### Videos in skill (60)
+
+---
+
+## [1.3.6] — 2026-07-30
+
+### Added
+
+- **High-pressure mock interview** — interviewer follow-up battery (intro, why us, impact, ownership, leadership stakes, industry)
+
+### Videos in skill (59)
+
+---
+
+## [1.3.5] — 2026-07-30
+
+### Added
+
+- **Biggest 3 interview mistakes** — Matt GPT / reporter / over-explainer; be human, stories > facts, say enough
+
+### Videos in skill (58)
+
+---
+
+## [1.3.4] — 2026-07-30
+
+### Added
+
+- **8 years coaching in 2 minutes** — learn/earn, 5–9 career, irreplaceable≠promotable, own development
+- **Self-intro words to avoid** — responsible/fast learner/hard worker → ownership/resourceful/impact-driven + proofs
+- **Performance reviews / brag book** — STAR stories, receipts, business impact; weaknesses with solutions
+- **Evaluate offers** — total comp, level/title traps, insurance, unlimited PTO myth, real perks
+- **Manage up / Manager Matrix** — train boundaries; micromanager, visionary, team builder, hands-off pleaser
+- **Smart talker in meetings** — contrasting + mutual purpose (vs smooth talker)
+- **Land offers faster** — job-search system, process over motivation
+- **Core Four job search** — warm/cold × one/many; rule of 20 rebalance
+- **Read / listen / ask** — be something to someone; decode intent + mirror context
+
+### Videos in skill (57)
+
+---
+
 ## [1.3.3] — 2026-07-30
 
 ### Added

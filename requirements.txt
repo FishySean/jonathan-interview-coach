@@ -1,5 +1,5 @@
-# YouTube 下载
-yt-dlp>=2024.1.0
+# YouTube 下载（[default] 含 yt-dlp-ejs，解 YouTube JS challenge 必需）
+yt-dlp[default]>=2024.1.0
 
 # 语音转文字（二选一，推荐 faster-whisper）
 faster-whisper>=1.0.0
